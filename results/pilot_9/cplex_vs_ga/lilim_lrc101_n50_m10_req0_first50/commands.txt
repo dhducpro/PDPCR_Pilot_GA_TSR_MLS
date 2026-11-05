@@ -1,0 +1,15 @@
+read model.lp
+set clocktype 2
+set timelimit 30
+set threads 1
+set randomseed 0
+set mip tolerances mipgap 0
+set mip tolerances absmipgap 0
+set mip tolerances integrality 1e-9
+set simplex tolerances feasibility 1e-9
+read start.mst
+optimize
+display solution bestbound
+display solution quality
+write solution.sol
+quit

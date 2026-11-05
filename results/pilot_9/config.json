@@ -1,0 +1,48 @@
+{
+  "sizes": [
+    50,
+    100,
+    200
+  ],
+  "families": [
+    "LC1",
+    "LR1",
+    "LRC1"
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "methods": [
+    "GA",
+    "TSR",
+    "MLS"
+  ],
+  "seconds_by_n": {
+    "50": 30.0,
+    "100": 60.0,
+    "200": 120.0
+  },
+  "workers": 5,
+  "GA_population_per_process": 16,
+  "TSR_options": {
+    "beta": 0.5,
+    "tiny_min_candidates": false,
+    "restart_best": 300,
+    "restart_new": 600
+  },
+  "MLS_options": {
+    "local_search_steps": 2,
+    "local_search_candidates": 8
+  },
+  "reference": "best_found computed from all methods/seeds, NOT certified optimum",
+  "source": "Li-Lim adapted for PDP-CR (not original PDPTW objective)",
+  "software": {
+    "python": "3.13.2 (tags/v3.13.2:4f8bb39, Feb  4 2025, 15:23:48) [MSC v.1942 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "timing": "solver time budget is per independent process; startup not charged; soft cutoff inside moves; CPU time and any overrun recorded"
+}

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.tmp
+
+# Recreated from the instance data by the notebook's CPLEX cell.
+results/**/model.lp
+results/**/solution.sol
+results/**/start.mst

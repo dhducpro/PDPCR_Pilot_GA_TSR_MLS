@@ -1,0 +1,112 @@
+
+Welcome to IBM(R) ILOG(R) CPLEX(R) Interactive Optimizer 22.1.2.0
+  with Simplex, Mixed Integer & Barrier Optimizers
+5725-A06 5725-A29 5724-Y48 5724-Y49 5724-Y54 5724-Y55 5655-Y21
+Copyright IBM Corp. 1988, 2024.  All Rights Reserved.
+
+Type 'help' for a list of available commands.
+Type 'help' followed by a command name for more
+information on commands.
+
+CPLEX> Problem 'model.lp' read.
+Read time = 0.03 sec. (4.37 ticks)
+CPLEX> New value for type of clock used to measure time: 2
+CPLEX> New value for time limit in seconds: 60
+CPLEX> New value for default parallel thread count: 1
+CPLEX> New value for seed to initialize the random number generator: 0
+CPLEX> New value for mixed integer optimality gap tolerance: 0
+CPLEX> New value for absolute mixed integer optimality gap tolerance: 0
+CPLEX> New value for integrality tolerance: 1e-09
+CPLEX> New value for feasibility tolerance: 1e-09
+CPLEX> MIP start file 'start.mst' read.
+CPLEX> Version identifier: 22.1.2.0 | 2024-11-25 | 0edbb82fd
+CPXPARAM_Threads                                 1
+CPXPARAM_RandomSeed                              0
+CPXPARAM_Simplex_Tolerances_Feasibility          1.0000000000000001e-09
+CPXPARAM_TimeLimit                               60
+CPXPARAM_MIP_Tolerances_AbsMIPGap                0
+CPXPARAM_MIP_Tolerances_MIPGap                   0
+CPXPARAM_MIP_Tolerances_Integrality              1.0000000000000001e-09
+1 of 1 MIP starts provided solutions.
+MIP start 'common_greedy' defined initial solution with objective 1885.8226.
+Tried aggregator 2 times.
+MIP Presolve eliminated 3622 rows and 3 columns.
+MIP Presolve modified 14700 coefficients.
+Aggregator did 3620 substitutions.
+Reduced MIP has 33365 rows, 16783 columns, and 116381 nonzeros.
+Reduced MIP has 10101 binaries, 6481 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.11 sec. (156.56 ticks)
+Probing time = 0.02 sec. (8.77 ticks)
+Tried aggregator 1 time.
+Detecting symmetries...
+Reduced MIP has 33365 rows, 16783 columns, and 116381 nonzeros.
+Reduced MIP has 10101 binaries, 6481 generals, 0 SOSs, and 0 indicators.
+Presolve time = 0.06 sec. (68.13 ticks)
+Probing time = 0.00 sec. (8.70 ticks)
+Clique table members: 1891.
+MIP emphasis: balance optimality and feasibility.
+MIP search method: dynamic search.
+Parallel mode: none, using 1 thread.
+Root relaxation solution time = 0.06 sec. (117.87 ticks)
+
+        Nodes                                         Cuts/
+   Node  Left     Objective  IInf  Best Integer    Best Bound    ItCnt     Gap
+
+*     0+    0                         1885.8226     1142.6893            39.41%
+      0     0     1298.2467    93     1885.8226     1298.2467      526   31.16%
+      0     0     1300.7391   180     1885.8226     Cuts: 423     1466   31.03%
+      0     0     1302.9237   231     1885.8226     Cuts: 387     2724   30.91%
+      0     0     1303.0328   235     1885.8226     Cuts: 225     3502   30.90%
+      0     0     1303.1941   231     1885.8226     Cuts: 103     3741   30.90%
+      0     0     1303.8743   250     1885.8226      Cuts: 56     4270   30.86%
+Detecting symmetries...
+      0     0     1303.9111   253     1885.8226     Cuts: 119     4328   30.86%
+      0     0     1303.9204   248     1885.8226      Cuts: 14     4630   30.86%
+Detecting symmetries...
+      0     2     1303.9204   247     1885.8226     1303.9239     4630   30.86%
+Elapsed time = 44.31 sec. (15422.28 ticks, tree = 0.01 MB, solutions = 1)
+      3     5     1304.1127   239     1885.8226     1303.9239     5193   30.86%
+      4     6     1304.1267   242     1885.8226     1303.9239     5553   30.86%
+      7     9     1304.1953   250     1885.8226     1303.9239     6378   30.86%
+     12    14     1304.1462   242     1885.8226     1303.9239     6771   30.86%
+     16    18     1304.8654   201     1885.8226     1303.9239     7668   30.86%
+     20    22     1304.9387   210     1885.8226     1303.9239     7964   30.86%
+     23    25     1305.0532   208     1885.8226     1303.9239     8636   30.86%
+     28    30     1305.4850   194     1885.8226     1303.9239     9254   30.86%
+     30    32     1305.7569   194     1885.8226     1303.9239     9460   30.86%
+     51    53     1307.2101   105     1885.8226     1303.9239    11812   30.86%
+Elapsed time = 56.33 sec. (19947.86 ticks, tree = 1.73 MB, solutions = 1)
+Advanced basis not built.
+
+Clique cuts applied:  7
+Cover cuts applied:  18
+Implied bound cuts applied:  4
+Flow cuts applied:  76
+Mixed integer rounding cuts applied:  68
+Zero-half cuts applied:  19
+Gomory fractional cuts applied:  31
+
+Root node processing (before b&c):
+  Real time             =   44.16 sec. (15315.46 ticks)
+Sequential b&c:
+  Real time             =   15.91 sec. (6035.03 ticks)
+                          ------------
+Total (root+branch&cut) =   60.06 sec. (21350.49 ticks)
+
+Solution pool: 1 solution saved.
+
+MIP - Time limit exceeded, integer feasible:  Objective =  1.8858226037e+03
+Current MIP best bound =  1.3039239173e+03 (gap = 581.899, 30.86%)
+Solution time =   60.06 sec.  Iterations = 13402  Nodes = 70 (71)
+Deterministic time = 21350.55 ticks  (355.47 ticks/sec)
+
+CPLEX> Current MIP best bound =  1.3039239173e+03 (gap = 581.899, 30.86%)
+CPLEX> Incumbent solution:
+MILP objective                                 1.8858226037e+03
+MILP solution norm |x| (Total, Max)            6.75938e+04  1.88582e+03
+MILP solution error (Ax=b) (Total, Max)        7.80826e-10  1.87299e-11
+MILP x bound error (Total, Max)                0.00000e+00  0.00000e+00
+MILP x integrality error (Total, Max)          0.00000e+00  0.00000e+00
+MILP slack bound error (Total, Max)            9.09495e-13  2.27374e-13
+CPLEX> Incumbent solution written to file 'solution.sol'.
+CPLEX> 
