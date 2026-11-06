@@ -1,5 +1,6 @@
 """Disconnect recovery tests; no optimization or worker processes are started."""
 import contextlib
+import ast
 import io
 import json
 from pathlib import Path
@@ -86,8 +87,62 @@ class ResumeTests(unittest.TestCase):
 
     def test_known_config_mismatch_is_not_overridden_by_recovery(self):
         (self.output/'config.json').write_text(json.dumps(dict(self.config, workers=5)))
-        with self.assertRaisesRegex(ValueError, 'different configuration'):
+        with self.assertRaisesRegex(ValueError, 'workers: saved=5, requested=2'):
             self.prepare()
+
+    def colab_restore(self):
+        notebook = Path(__file__).resolve().parents[1]/'run_pilot_colab.ipynb'
+        source = ''.join(json.loads(notebook.read_text(encoding='utf8'))['cells'][2]['source'])
+        nodes = ast.parse(source).body
+        first = next(i for i, node in enumerate(nodes) if isinstance(node, ast.Assign)
+                     and any(isinstance(t, ast.Name) and t.id == 'OUTPUT' for t in node.targets))
+        last = next(i for i, node in enumerate(nodes) if isinstance(node, ast.Expr)
+                    and isinstance(node.value, ast.Call) and node.value.args
+                    and isinstance(node.value.args[0], ast.Constant)
+                    and node.value.args[0].value == 'Cloud project:')
+        context = dict(ROOT=self.root, RESULT_NAME='', json=json,
+                       SIZES=[50, 100, 200], FAMILIES=['LC1'], SEEDS=list(range(5)),
+                       METHODS=('GA', 'TSR', 'MLS'), SECONDS_BY_N={50: 1800},
+                       WORKERS=5, GA_POPULATION=32)
+        block = ast.Module(body=nodes[first:last], type_ignores=[])
+        with contextlib.redirect_stdout(io.StringIO()):
+            exec(compile(block, 'Colab saved settings', 'exec'), context)
+        return context
+
+    def test_colab_restores_settings_instead_of_notebook_defaults(self):
+        (self.output/'config.json').write_text(json.dumps(self.config))
+        restored = self.colab_restore()
+        self.assertEqual(restored['SIZES'], [2])
+        self.assertEqual(restored['FAMILIES'], ['TEST'])
+        self.assertEqual(restored['METHODS'], ('GA',))
+        self.assertEqual(restored['WORKERS'], 2)
+        self.assertEqual(restored['GA_POPULATION'], 16)
+        self.assertEqual(restored['SECONDS_BY_N'], {2: 600.0})
+
+    def test_colab_uses_backup_when_main_config_is_broken(self):
+        (self.output/'config.json').write_text('{broken')
+        (self.output/'config.backup.json').write_text(json.dumps(self.config))
+        self.assertEqual(self.colab_restore()['SECONDS_BY_N'], {2: 600.0})
+
+    def test_colab_new_folder_keeps_requested_defaults(self):
+        restored = self.colab_restore()
+        self.assertEqual(restored['WORKERS'], 5)
+        self.assertEqual(restored['GA_POPULATION'], 32)
+
+    def test_colab_restored_settings_resume_without_restarting_saved_seeds(self):
+        (self.output/'config.json').write_text(json.dumps(self.config))
+        paths = [self.save_seed(seed) for seed in range(5)]
+        before = [p.read_bytes() for p in paths]
+        restored = self.colab_restore()
+        with patch.object(runner, 'ProcessPoolExecutor', side_effect=AssertionError('Unexpected search')):
+            with contextlib.redirect_stdout(io.StringIO()):
+                rows = runner.run_pilot(sizes=restored['SIZES'], families=restored['FAMILIES'],
+                    seeds=restored['SEEDS'], methods=restored['METHODS'],
+                    seconds_by_n=restored['SECONDS_BY_N'], workers=restored['WORKERS'],
+                    population=restored['GA_POPULATION'], manifest=self.root/'manifest.json',
+                    output_dir=self.output, resume=True, recover_missing_config=True)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual([p.read_bytes() for p in paths], before)
 
     def test_resume_false_and_non_recovery_preserve_existing_runs(self):
         seed = self.save_seed()

@@ -30,6 +30,7 @@ for key in ('OPENBLAS_NUM_THREADS','OMP_NUM_THREADS','MKL_NUM_THREADS','NUMEXPR_
 
 ROOT = Path(__file__).resolve().parent
 METHODS = ('GA','TSR','MLS')
+RESUME_FORMAT_VERSION = 2
 CONFIG_KEYS = ('sizes','families','seeds','methods','seconds_by_n','workers',
                'GA_population_per_process','TSR_options','MLS_options')
 
@@ -102,8 +103,12 @@ def _prepare_run_config(output, selected, config, resume, recover_missing_config
                 previous = None
                 damaged.append(candidate)
         if previous is not None:
-            if any(previous.get(k) != config[k] for k in CONFIG_KEYS):
-                raise ValueError('Existing output has different configuration. Restore the original settings to resume.')
+            differences = [f'{k}: saved={previous.get(k)!r}, requested={config[k]!r}'
+                           for k in CONFIG_KEYS if previous.get(k) != config[k]]
+            if differences:
+                raise ValueError('Existing output has different configuration:\n  '
+                                 + '\n  '.join(differences)
+                                 + '\nRestore the saved settings to resume; seed files are preserved.')
             config = previous
         elif has_runs:
             if not recover_missing_config:
