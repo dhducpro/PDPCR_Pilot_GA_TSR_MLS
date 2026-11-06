@@ -9,7 +9,7 @@
 CLI:
  python prepare_instances.py
  python run_pilot.py --sizes 50 100 200 --families LC1 LR1 LRC1 \
-   --seconds50 30 --seconds100 60 --seconds200 120 --workers 5
+   --seconds50 600 --seconds100 1800 --seconds200 3600 --workers 5
 """
 from __future__ import annotations
 import argparse
@@ -193,7 +193,7 @@ def run_pilot(sizes=(50,100,200),families=('LC1','LR1','LRC1'),seeds=(0,1,2,3,4)
               seconds_by_n=None,workers=5,population=16,
               methods=METHODS,output_dir=None,manifest=None,resume=True):
     if seconds_by_n is None:
-        seconds_by_n={50:30.0,100:60.0,200:120.0}
+        seconds_by_n={50:600.0,100:1800.0,200:3600.0}
     if len(seeds)!=5 or len(set(seeds))!=5:
         raise ValueError('Use exactly five distinct seeds for each method and instance')
     if not (1<=workers<=5 and population>=2):
@@ -206,7 +206,7 @@ def run_pilot(sizes=(50,100,200),families=('LC1','LR1','LRC1'),seeds=(0,1,2,3,4)
             raise ValueError('time budget must be positive')
     manifest=Path(manifest or ROOT/'instances'/'manifest.json')
     selected=_select(_load_manifest(manifest),list(sizes),list(families))
-    output=Path(output_dir or ROOT/'results'/'pilot')
+    output=Path(output_dir or ROOT/'results'/'pilot_9_10_30_60min')
     for folder in ('seeds','best'):(output/folder).mkdir(parents=True,exist_ok=True)
     config={'sizes':list(sizes),'families':list(families),'seeds':list(seeds),
             'methods':list(methods),'seconds_by_n':{str(k):seconds_by_n[k] for k in sizes},
@@ -265,9 +265,9 @@ def main():
     p.add_argument('--seeds',type=int,nargs=5,default=[0,1,2,3,4])
     p.add_argument('--workers',type=int,default=5)
     p.add_argument('--population',type=int,default=16)
-    p.add_argument('--seconds50',type=float,default=30.0)
-    p.add_argument('--seconds100',type=float,default=60.0)
-    p.add_argument('--seconds200',type=float,default=120.0)
+    p.add_argument('--seconds50',type=float,default=600.0)
+    p.add_argument('--seconds100',type=float,default=1800.0)
+    p.add_argument('--seconds200',type=float,default=3600.0)
     p.add_argument('--output',default=None)
     p.add_argument('--manifest',default=None)
     p.add_argument('--no-resume',action='store_true')

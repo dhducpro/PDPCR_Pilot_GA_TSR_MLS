@@ -11,9 +11,15 @@ python -m pip install -r requirements.txt
 jupyter notebook run_pilot.ipynb
 ```
 
-Open the notebook from the project folder. Edit the configuration cell, then run the experiment cells. Each method uses 5 seeds with a limit of 30, 60, or 120 seconds per seed for 50, 100, or 200 tasks.
+Open the notebook from the project folder. Edit the configuration cell, then run the experiment cells. Each method uses 5 seeds with a limit of 10, 30, or 60 minutes per seed for 50, 100, or 200 tasks.
 
 Set `DEMO_MODE = True` for a short offline demo. Choose a new `RESULT_NAME` when changing settings or solver code.
+
+## Google Colab
+
+[Open in Colab](https://colab.research.google.com/github/dhducpro/PDPCR_Pilot_GA_TSR_MLS/blob/main/run_pilot_colab.ipynb)
+
+Run the cells in order and allow Google Drive access. GA, TSR and MLS run on Google's CPU runtime; CPLEX is excluded. Results are saved in `MyDrive/PDPCR_Pilot_GA_TSR_MLS_colab/results/`. Rerun with the same settings to reuse completed seeds. With two workers, the full campaign has about 45 hours of scheduled solver time, so multiple sessions may be needed. An interrupted seed starts over. Use a different result name when changing sizes, families, workers or budgets.
 
 ## CPLEX
 
