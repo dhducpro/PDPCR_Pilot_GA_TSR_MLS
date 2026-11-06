@@ -14,6 +14,7 @@ CLI:
 from __future__ import annotations
 import argparse
 import csv
+import hashlib
 import json
 import os
 import platform
@@ -29,6 +30,103 @@ for key in ('OPENBLAS_NUM_THREADS','OMP_NUM_THREADS','MKL_NUM_THREADS','NUMEXPR_
 
 ROOT = Path(__file__).resolve().parent
 METHODS = ('GA','TSR','MLS')
+CONFIG_KEYS = ('sizes','families','seeds','methods','seconds_by_n','workers',
+               'GA_population_per_process','TSR_options','MLS_options')
+
+
+def _atomic_json(path, value):
+    path = Path(path)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    with temporary.open('w', encoding='utf8') as stream:
+        json.dump(value, stream, indent=2, ensure_ascii=False, allow_nan=False)
+        stream.flush()
+        os.fsync(stream.fileno())
+    temporary.replace(path)
+
+
+def _instance_hash(instance):
+    raw = json.dumps(instance.__dict__, sort_keys=True, separators=(',', ':'), allow_nan=False)
+    return hashlib.sha256(raw.encode('utf8')).hexdigest()
+
+
+def _check_saved_runs(output, selected, config):
+    """Check completed seeds before rebuilding a missing configuration file."""
+    from pdpcr.core import Instance, evaluate, replay_routes
+    instances = {r['name']: Instance.load(ROOT/r['instance_file']) for r in selected}
+    records = []
+    for path in sorted((output/'seeds').glob('*.json')):
+        try:
+            record = json.loads(path.read_text(encoding='utf8'))
+            name, method, seed = record['instance'], record['method'], record['seed']
+            if name not in instances or method not in config['methods'] or seed not in config['seeds']:
+                raise ValueError('Saved seed is outside the requested experiment')
+            instance = instances[name]
+            if path.name != f'{name}__{method}__seed{seed}.json':
+                raise ValueError('Saved seed filename disagrees with its contents')
+            if record['n'] != instance.n or record['m'] != instance.robots:
+                raise ValueError('Saved instance dimensions differ')
+            if record['time_limit_seconds'] != config['seconds_by_n'][str(instance.n)]:
+                raise ValueError('Saved seed has a different time limit')
+            if record.get('run_config') is not None and any(
+                    record['run_config'].get(k) != config[k] for k in CONFIG_KEYS):
+                raise ValueError('Saved seed has different experimental settings')
+            if record.get('instance_sha256') not in (None, _instance_hash(instance)):
+                raise ValueError('Saved seed belongs to different input data')
+            schedule = evaluate(instance, record['flow'])
+            replay = replay_routes(instance, record['routes'], schedule.starts)
+            if (not record.get('valid') or abs(schedule.makespan-record['objective']) > 1e-6
+                    or abs(replay['actual_return_max']-record['objective']) > 1e-6):
+                raise ValueError('Saved objective disagrees with route replay')
+            records.append(record)
+        except (KeyError, TypeError, ValueError) as error:
+            raise ValueError(f'Cannot resume {path.name}: {error}. File preserved.') from error
+    return records
+
+
+def _prepare_run_config(output, selected, config, resume, recover_missing_config):
+    cfg, backup = output/'config.json', output/'config.backup.json'
+    has_runs = any((output/'seeds').glob('*.json'))
+    if not resume and has_runs:
+        raise ValueError('Saved seed files exist. Use resume=True to continue this experiment; files preserved.')
+    previous, damaged = None, []
+    if resume:
+        for candidate in (cfg, backup):
+            if not candidate.exists():
+                continue
+            try:
+                previous = json.loads(candidate.read_text(encoding='utf8'))
+                if not isinstance(previous, dict) or any(k not in previous for k in CONFIG_KEYS):
+                    raise ValueError('Incomplete experiment configuration')
+                break
+            except (ValueError, OSError):
+                previous = None
+                damaged.append(candidate)
+        if previous is not None:
+            if any(previous.get(k) != config[k] for k in CONFIG_KEYS):
+                raise ValueError('Existing output has different configuration. Restore the original settings to resume.')
+            config = previous
+        elif has_runs:
+            if not recover_missing_config:
+                raise ValueError('Saved seeds exist but config.json and its backup are missing or unreadable. '
+                                 'Keep the original settings and use recover_missing_config=True; files preserved.')
+            records = _check_saved_runs(output, selected, config)
+            legacy = any(record.get('run_config') is None for record in records)
+            config = dict(config, recovery={
+                'source': 'validated saved seed records', 'completed_seed_count': len(records),
+                'unverified_legacy_settings': ['workers', 'GA_population_per_process',
+                                               'TSR_options', 'MLS_options'] if legacy else []})
+            print(f'Recovered experiment configuration from {len(records)} valid saved seeds.', flush=True)
+            if legacy:
+                print('Older seed files do not store population/worker/options settings. '
+                      'Recovery uses the current values; keep your original settings.', flush=True)
+    for candidate in damaged:
+        # Keep the original bytes for inspection rather than deleting damaged metadata.
+        preserved = candidate.with_name(candidate.name+'.unreadable')
+        if not preserved.exists():
+            preserved.write_bytes(candidate.read_bytes())
+    _atomic_json(backup, config)
+    _atomic_json(cfg, config)
+    return config
 
 
 def _seed_worker(method, path, seed, seconds, population):
@@ -191,7 +289,8 @@ def _summarize(output,selected,methods,seeds):
 
 def run_pilot(sizes=(50,100,200),families=('LC1','LR1','LRC1'),seeds=(0,1,2,3,4),
               seconds_by_n=None,workers=5,population=16,
-              methods=METHODS,output_dir=None,manifest=None,resume=True):
+              methods=METHODS,output_dir=None,manifest=None,resume=True,
+              recover_missing_config=False):
     if seconds_by_n is None:
         seconds_by_n={50:600.0,100:1800.0,200:3600.0}
     if len(seeds)!=5 or len(set(seeds))!=5:
@@ -218,19 +317,12 @@ def run_pilot(sizes=(50,100,200),families=('LC1','LR1','LRC1'),seeds=(0,1,2,3,4)
             'source':'Li-Lim adapted for PDP-CR (not original PDPTW objective)',
             'software':{'python':sys.version,'platform':platform.platform()},
             'timing':'solver time budget is per independent process; startup not charged; soft cutoff inside moves; CPU time and any overrun recorded'}
-    cfg=output/'config.json'
-    if cfg.exists() and resume:
-        previous=json.loads(cfg.read_text(encoding='utf8'))
-        # Machine paths/versions not part of the experimental parameter identity.
-        keys=['sizes','families','seeds','methods','seconds_by_n','workers','GA_population_per_process']
-        if any(previous.get(k)!=config[k] for k in keys):
-            raise ValueError('Existing output has different configuration. Use another output_dir or --no-resume.')
-    else:
-        if any((output/'seeds').glob('*.json')):
-            raise ValueError('Output dir already contains run files; choose empty dir.')
-        cfg.write_text(json.dumps(config,indent=2,ensure_ascii=False),encoding='utf8')
+    config = _prepare_run_config(output, selected, config, resume, recover_missing_config)
+    run_config = {k: config[k] for k in CONFIG_KEYS}
     for spec in selected:
         path=ROOT/spec['instance_file']
+        from pdpcr.core import Instance
+        instance_sha256 = _instance_hash(Instance.load(path))
         for method in methods:
             missing=[seed for seed in seeds if not (output/'seeds'/f"{spec['name']}__{method}__seed{seed}.json").exists()]
             if not missing:
@@ -244,6 +336,7 @@ def run_pilot(sizes=(50,100,200),families=('LC1','LR1','LRC1'),seeds=(0,1,2,3,4)
                           float(seconds_by_n[spec['n']]),population):seed for seed in missing}
                 for result_future in as_completed(future):
                     rec=result_future.result()
+                    rec.update(run_config=run_config, instance_sha256=instance_sha256)
                     # Atomic per-seed commit: safe to resume after interruption.
                     target=output/'seeds'/f"{spec['name']}__{method}__seed{rec['seed']}.json"
                     temp=target.with_suffix('.json.tmp')
